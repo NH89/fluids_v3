@@ -38,16 +38,17 @@
 	#define GRID_UCHAR			0xFF
 	#define GRID_UNDEF			4294967295
 
-	#define RUN_PAUSE			0
-	#define RUN_SEARCH			1
-	#define RUN_VALIDATE		2
-	#define RUN_CPU_SLOW		3
-	#define RUN_CPU_GRID		4
-	#define RUN_CUDA_RADIX		5
-	#define RUN_CUDA_INDEX		6
-	#define RUN_CUDA_FULL		7
-	#define RUN_CUDA_CLUSTER	8
-	#define RUN_PLAYBACK		9
+	#define RUN_PAUSE        0
+	#define RUN_SEARCH       1
+	#define RUN_VALIDATE     2
+	#define RUN_CPU_SLOW     3
+	#define RUN_CPU_GRID     4
+	#define RUN_CUDA_RADIX   5
+	#define RUN_CUDA_INDEX   6
+	#define RUN_CUDA_FULL    7
+	#define RUN_CUDA_CLUSTER 8
+	#define RUN_OPENCL       9
+	#define RUN_PLAYBACK     10
 
 	// Scalar params
 	#define PMODE				0

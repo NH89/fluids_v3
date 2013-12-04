@@ -400,9 +400,9 @@ void keyboard_func ( unsigned char key, int x, int y )
 		psys.SetVec ( PEMIT_RATE, Vector3DF(psys_freq, psys_rate, 0) );
 		break;
 	
-	case 'f': case 'F':		psys.IncParam ( PMODE, -1, 1, 8 );		psys.Setup (false); break;
-	case 'g': case 'G':		psys.IncParam ( PMODE, 1, 1, 8 );		psys.Setup (false); break;
-	case ' ':				psys.SetParam ( PMODE, RUN_PAUSE, 0, 8 );	break;		// pause
+	case 'f': case 'F':		psys.IncParam ( PMODE, -1, 1, 9 );		psys.Setup (false); break;
+	case 'g': case 'G':		psys.IncParam ( PMODE, 1, 1, 9 );		psys.Setup (false); break;
+	case ' ':				psys.SetParam ( PMODE, RUN_PAUSE, 0, 9 );	break;		// pause
 
 	case '1':				psys.IncParam ( PDRAWGRID, 1, 0, 1 );		break;
 	case '2':				psys.IncParam ( PDRAWTEXT, 1, 0, 1 );		break;
