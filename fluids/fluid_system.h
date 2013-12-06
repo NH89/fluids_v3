@@ -203,6 +203,7 @@
 		void RunSimulateCUDAFull ();
 		void RunSimulateCUDACluster ();
 #endif
+		void RunSimulateOpenCL ();
 		void RunPlayback ();
 		
 		void Advance ();

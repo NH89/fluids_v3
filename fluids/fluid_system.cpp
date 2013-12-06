@@ -86,7 +86,7 @@ FluidSystem::FluidSystem ()
 #ifdef BUILD_CUDA
 	m_Param [ PMODE ]		= RUN_CUDA_FULL;//RUN_CPU_GRID;//RUN_CPU_SLOW;
 #else
-	m_Param [ PMODE ]		= RUN_CPU_SLOW;
+	m_Param [ PMODE ]		= RUN_OPENCL;
 #endif
 
 	m_Param [ PEXAMPLE ]	= 1;
@@ -708,6 +708,7 @@ void FluidSystem::Run (int width, int height)
 	case RUN_CUDA_FULL:	RunSimulateCUDAFull();	break;
 	case RUN_CUDA_CLUSTER:	RunSimulateCUDACluster();	break;
 #endif
+	case RUN_OPENCL:	RunSimulateOpenCL();	break;
 	case RUN_PLAYBACK:		RunPlayback();			break;
 	};
 
@@ -2157,6 +2158,7 @@ std::string FluidSystem::getModeStr ()
 	case RUN_CUDA_INDEX: buf = "SIMULATE CUDA Index Sort" + cuda_disabled; break;
 	case RUN_CUDA_FULL: buf = "SIMULATE CUDA Full Sort" + cuda_disabled; break;
 	case RUN_CUDA_CLUSTER: buf = "SIMULATE CUDA Clustering" + cuda_disabled; break;
+	case RUN_OPENCL: buf = "SIMULATE OpenCL"; break;
 	case RUN_PLAYBACK: buf = "PLAYBACK (" + mFileName + ")"; break;
 	};
 	//sprintf ( buf, "RECORDING (%s, %.4f MB)", mFileName.c_str(), mFileSize ); break;
@@ -2557,4 +2559,19 @@ void FluidSystem::CaptureVideo (int width, int height)
     return;
 }
 
-
+void FluidSystem::RunSimulateOpenCL ()
+{
+	mint::Time start;
+	start.SetSystemTime ( ACC_NSEC );
+	InsertParticles();//why?
+	record ( PTIME_INSERT, "Insert OpenCL", start );			
+	start.SetSystemTime ( ACC_NSEC );
+	ComputePressureSlow ();
+	record ( PTIME_PRESS, "Press OpenCL", start );
+	start.SetSystemTime ( ACC_NSEC );
+	ComputeForceSlow ();
+	record ( PTIME_FORCE, "Force OpenCL", start );
+	start.SetSystemTime ( ACC_NSEC );
+	Advance ();
+	record ( PTIME_ADVANCE, "Advance OpenCL", start );
+}
