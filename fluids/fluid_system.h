@@ -20,7 +20,6 @@
   3. This notice may not be removed or altered from any source distribution.
 */
 
-
 #ifndef DEF_FLUID_SYS
 	#define DEF_FLUID_SYS
 
@@ -148,6 +147,12 @@
 		int				padding;		// 68
 	};
 
+	namespace cl {
+		class Context;
+		class CommandQueue;
+		class Program;
+	}
+
 	class FluidSystem {
 	public:
 		FluidSystem ();
@@ -262,6 +267,9 @@
 		void ComputeForceSlow ();				// O(n^2)
 		//void SPH_ComputeForceGrid ();				// O(kn) - spatial grid
 
+		void ComputePressureOpenCL ();
+		void ComputeForceOpenCL ();
+
 		// Recording
 		void StartRecord ();
 		void StartPlayback ( int p );
@@ -372,6 +380,10 @@
 
 		// XML Settings file
 		XmlSettings				xml;
+
+		cl::Context* m_context;
+		cl::CommandQueue* m_queue;
+		cl::Program* m_program;
 	};	
 
 #endif

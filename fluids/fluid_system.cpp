@@ -40,6 +40,11 @@
 	#include "fluid_system_host.cuh"
 #endif
 
+#define __CL_ENABLE_EXCEPTIONS
+#include <CL/cl.hpp>
+#include <iostream>
+#include <fstream>
+
 #define EPSILON			0.00001f			//for collision detection
 
 #ifdef BUILD_CUDA
@@ -98,6 +103,32 @@ FluidSystem::FluidSystem ()
 	m_Toggle [ PUSE_GRID ]	=	false;
 	m_Toggle [ PPROFILE ]	=	false;
 	m_Toggle [ PCAPTURE ]   =	false;
+
+	//available platforms
+	std::vector<cl::Platform> platforms;
+	cl::Platform::get(&platforms);
+
+	//select the default platform and create a context using this platform and the GPU
+	cl_context_properties cps[3] = {CL_CONTEXT_PLATFORM, (cl_context_properties)(platforms[0])(), 0};
+	m_context = new cl::Context(CL_DEVICE_TYPE_GPU, cps);
+
+	//list of devices on this platform
+	std::vector<cl::Device> devices = m_context->getInfo<CL_CONTEXT_DEVICES>();
+
+	//create a command queue and use the first device
+	m_queue = new cl::CommandQueue(*m_context, devices[0]);
+
+	//opencl source file
+	std::ifstream sourceFile("fluids/simulate_opencl.cl");
+	std::string sourceCode(std::istreambuf_iterator<char>(sourceFile), (std::istreambuf_iterator<char>()));
+	cl::Program::Sources source(1, std::make_pair(sourceCode.c_str(), sourceCode.length()+1));
+
+	//make program of the source code in the context
+	m_program = new cl::Program(*m_context, source);
+
+	//build program for these specific devices
+	m_program->build(devices);
+
 
 	if ( !xml.Load ( "scene.xml" ) ) {
 		error.PrintF ( "fluid", "ERROR: Problem loading scene.xml. Check formatting.\n" );
@@ -2559,6 +2590,191 @@ void FluidSystem::CaptureVideo (int width, int height)
     return;
 }
 
+void FluidSystem::ComputePressureOpenCL ()
+{
+	const float d = m_Param[PSIMSCALE];
+	const float d2 = d*d;
+
+	int nbrcnt = 0;
+	int srch = 0;
+
+	const int num_points = NumPoints();
+
+	memset(mGridCell, 0, num_points * sizeof(uint));
+
+	cl::Kernel kernel(*m_program, "compute_pressure");
+
+	//create memory buffers
+	cl::Buffer pos_buf = cl::Buffer(*m_context, CL_MEM_READ_ONLY, num_points * 3 * sizeof(float));
+	cl::Buffer pressure_buf = cl::Buffer(*m_context, CL_MEM_WRITE_ONLY, num_points * sizeof(float));
+	cl::Buffer density_buf = cl::Buffer(*m_context, CL_MEM_WRITE_ONLY, num_points * sizeof(float));
+
+	m_queue->enqueueWriteBuffer(pos_buf, CL_TRUE, 0, num_points * 3 * sizeof(float), mPos);
+	m_queue->enqueueWriteBuffer(pressure_buf, CL_TRUE, 0, num_points * sizeof(float), mPressure);
+	m_queue->enqueueWriteBuffer(density_buf, CL_TRUE, 0, num_points * sizeof(float), mDensity);
+
+	//kernel's arguments
+	kernel.setArg(0, num_points);
+	kernel.setArg(1, d2);
+	kernel.setArg(2, static_cast<float>(m_R2));
+	kernel.setArg(3, static_cast<float>(m_Param[PMASS]));
+	kernel.setArg(4, static_cast<float>(m_Poly6Kern));
+	kernel.setArg(5, static_cast<float>(m_Param[PRESTDENSITY]));
+	kernel.setArg(6, static_cast<float>(m_Param[PINTSTIFF]));
+	kernel.setArg(7, pos_buf);
+	kernel.setArg(8, pressure_buf);
+	kernel.setArg(9, density_buf);
+
+	cl::NDRange global(num_points), local(1);
+	cl::Event event;
+	m_queue->enqueueNDRangeKernel(kernel, cl::NullRange, global, local, 0, &event);
+	event.wait();
+
+	m_queue->enqueueReadBuffer(pressure_buf, CL_TRUE, 0, num_points * sizeof(float), mPressure);
+	m_queue->enqueueReadBuffer(density_buf, CL_TRUE, 0, num_points * sizeof(float), mDensity);
+
+	m_Param [ PSTAT_NBR ] = num_points * num_points; //FIXME not really...
+	m_Param [ PSTAT_SRCH ] = (num_points * num_points) - num_points;
+
+#if 0
+	for ( i=0; i < NumPoints(); i++ )
+	{
+		mGridCell[i]=0;
+
+		sum = 0.0;
+
+		for ( j=0; j < NumPoints(); j++ )
+		{
+			if ( i==j )
+				continue;
+
+			dst = *(mPos + j);
+			dst -= *ipos;
+			dsq = d2*(dst.x*dst.x + dst.y*dst.y + dst.z*dst.z);
+			if ( dsq <= m_R2 ) {
+				c =  m_R2 - dsq;
+				sum += c * c * c;
+				nbrcnt++;
+			}
+			srch++;
+		}
+		*idensity = sum * m_Param[PMASS] * m_Poly6Kern ;
+		*ipress = ( *idensity - m_Param[PRESTDENSITY] ) * m_Param[PINTSTIFF];
+		*idensity = 1.0f / *idensity;
+
+		ipos++;
+		idensity++;
+		ipress++;
+	}
+	// Stats:
+	m_Param [ PSTAT_NBR ] = float(nbrcnt);
+	m_Param [ PSTAT_SRCH ] = float(srch);
+#endif
+
+	if ( m_Param[PSTAT_NBR] > m_Param [ PSTAT_NBRMAX ] ) m_Param [ PSTAT_NBRMAX ] = m_Param[PSTAT_NBR];
+	if ( m_Param[PSTAT_SRCH] > m_Param [ PSTAT_SRCHMAX ] ) m_Param [ PSTAT_SRCHMAX ] = m_Param[PSTAT_SRCH];
+}
+
+void FluidSystem::ComputeForceOpenCL ()
+{
+	const float d = m_Param[PSIMSCALE];
+	const float d2 = d*d;
+	const float d5spikykern = d * (-0.5f * m_SpikyKern);
+	const float vterm = m_LapKern * m_Param[PVISC];
+	const float r = m_Param[PSMOOTHRADIUS];
+
+	const int num_points = NumPoints();
+
+	cl::Kernel kernel(*m_program, "compute_force");
+
+	//create memory buffers
+	cl::Buffer pos_buf = cl::Buffer(*m_context, CL_MEM_READ_ONLY, num_points * 3 * sizeof(float));
+	cl::Buffer pressure_buf = cl::Buffer(*m_context, CL_MEM_READ_ONLY, num_points * sizeof(float));
+	cl::Buffer density_buf = cl::Buffer(*m_context, CL_MEM_READ_ONLY, num_points * sizeof(float));
+	cl::Buffer veleval_buf = cl::Buffer(*m_context, CL_MEM_READ_ONLY, num_points * 3 * sizeof(float));
+	cl::Buffer force_buf = cl::Buffer(*m_context, CL_MEM_READ_WRITE, num_points * 3 * sizeof(float));
+
+	m_queue->enqueueWriteBuffer(pos_buf, CL_TRUE, 0, num_points * 3 * sizeof(float), mPos);
+	m_queue->enqueueWriteBuffer(pressure_buf, CL_TRUE, 0, num_points * sizeof(float), mPressure);
+	m_queue->enqueueWriteBuffer(density_buf, CL_TRUE, 0, num_points * sizeof(float), mDensity);
+	m_queue->enqueueWriteBuffer(veleval_buf, CL_TRUE, 0, num_points * 3 * sizeof(float), mVelEval);
+	//m_queue->enqueueWriteBuffer(force_buf, CL_TRUE, 0, num_points * 3 * sizeof(float), forces);
+
+	//kernel's arguments
+	kernel.setArg( 0, num_points);
+	kernel.setArg( 1, d2);
+	kernel.setArg( 2, r);
+	kernel.setArg( 3, static_cast<float>(m_R2));
+	kernel.setArg( 4, d5spikykern);
+	kernel.setArg( 5, vterm);
+	kernel.setArg( 6, pos_buf);
+	kernel.setArg( 7, pressure_buf);
+	kernel.setArg( 8, density_buf);
+	kernel.setArg( 9, veleval_buf);
+	kernel.setArg(10, force_buf);
+
+	cl::NDRange global(num_points), local(1);
+	cl::Event event;
+
+	m_queue->enqueueNDRangeKernel(kernel, cl::NullRange, global, local, 0, &event);
+	event.wait();
+
+	float* forces = new float[num_points * 3];
+	m_queue->enqueueReadBuffer(force_buf, CL_TRUE, 0, num_points *  3 * sizeof(float), forces);
+
+	for (int i=0; i < num_points; ++i) {
+		const int j = i * 3;
+		mForce[i].x = forces[j+0];
+		mForce[i].y = forces[j+1];
+		mForce[i].z = forces[j+3];
+	}
+	delete[] forces;
+
+#if 0
+	for ( i=0; i < NumPoints(); i++ )
+	{
+		iforce->Set ( 0, 0, 0 );
+
+		for ( j=0; j < NumPoints(); j++ )
+		{
+
+			if ( i==j )
+				continue;
+
+			jpos = *(mPos + j);
+			dx = ( ipos->x - jpos.x);		// dist in cm
+			dy = ( ipos->y - jpos.y);
+			dz = ( ipos->z - jpos.z);
+			dsq = d2*(dx*dx + dy*dy + dz*dz);
+			if ( dsq <= m_R2 )
+			{
+
+				jdist = sqrt(dsq);
+
+				jpress = *(mPressure + j);
+				jdensity = *(mDensity + j);
+				jveleval = *(mVelEval + j);
+				dx = ( ipos->x - jpos.x);		// dist in cm
+				dy = ( ipos->y - jpos.y);
+				dz = ( ipos->z - jpos.z);
+				c = (mR-jdist);
+				pterm = d * -0.5f * c * m_SpikyKern * ( *ipress + jpress ) / jdist;
+				dterm = c * (*idensity) * jdensity;
+				vterm = m_LapKern * visc;
+				iforce->x += ( pterm * dx + vterm * ( jveleval.x - iveleval->x) ) * dterm;
+				iforce->y += ( pterm * dy + vterm * ( jveleval.y - iveleval->y) ) * dterm;
+				iforce->z += ( pterm * dz + vterm * ( jveleval.z - iveleval->z) ) * dterm;
+			}
+		}
+		ipos++;
+		iveleval++;
+		iforce++;
+		ipress++;
+		idensity++;
+	}
+#endif
+}
+
 void FluidSystem::RunSimulateOpenCL ()
 {
 	mint::Time start;
@@ -2566,10 +2782,12 @@ void FluidSystem::RunSimulateOpenCL ()
 	InsertParticles();//why?
 	record ( PTIME_INSERT, "Insert OpenCL", start );			
 	start.SetSystemTime ( ACC_NSEC );
-	ComputePressureSlow ();
+	ComputePressureOpenCL ();
+	//ComputePressureSlow ();
 	record ( PTIME_PRESS, "Press OpenCL", start );
 	start.SetSystemTime ( ACC_NSEC );
-	ComputeForceSlow ();
+	ComputeForceOpenCL ();
+	//ComputeForceSlow ();
 	record ( PTIME_FORCE, "Force OpenCL", start );
 	start.SetSystemTime ( ACC_NSEC );
 	Advance ();

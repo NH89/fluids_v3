@@ -38,7 +38,7 @@
 #ifdef _MSC_VER						// Windows
 	#include <gl/glut.h>
 #else								// Linux
-	#include <GL/glut.h>	
+	#include <GL/glut.h>
 #endif
 
 bool bTiming = true;
