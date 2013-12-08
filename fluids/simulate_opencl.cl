@@ -35,16 +35,16 @@ __kernel void compute_pressure(const int num_points, const float d2, const float
 __kernel void compute_force(const int num_points, const float d2, const float r, const float r2, const float d5spikykern, const float vterm
 	,global float* pos, global float* pressure, global float* density, global float* veleval, global float* force) {
 
-	int i = get_global_id(0);
-	int i_idx = i * 3;
+	const int i = get_global_id(0);
+	const int i_idx = i * 3;
 
 	const int ipos_x = pos[i_idx+0];
 	const int ipos_y = pos[i_idx+1];
 	const int ipos_z = pos[i_idx+2];
 
-	force[ipos_x] = 0;
-	force[ipos_y] = 0;
-	force[ipos_z] = 0;
+	force[i_idx+0] = 0;
+	force[i_idx+1] = 0;
+	force[i_idx+2] = 0;
 
 	const float ipress = pressure[i];
 	const float idensity = density[i];
@@ -74,9 +74,9 @@ __kernel void compute_force(const int num_points, const float d2, const float r,
 			const float c = (r - jdist);
 			const float pterm = c * d5spikykern * ( ipress + jpress ) / jdist;
 			const float dterm = c * idensity * jdensity;
-			force[ipos_x] += ( pterm * dx + vterm * ( jveleval_x - iveleval_x) ) * dterm;
-			force[ipos_y] += ( pterm * dy + vterm * ( jveleval_y - iveleval_y) ) * dterm;
-			force[ipos_z] += ( pterm * dz + vterm * ( jveleval_z - iveleval_z) ) * dterm;
+			force[i_idx+0] += ( pterm * dx + vterm * ( jveleval_x - iveleval_x) ) * dterm;
+			force[i_idx+1] += ( pterm * dy + vterm * ( jveleval_y - iveleval_y) ) * dterm;
+			force[i_idx+2] += ( pterm * dz + vterm * ( jveleval_z - iveleval_z) ) * dterm;
 		}
 	}
 
