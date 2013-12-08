@@ -38,9 +38,9 @@ __kernel void compute_force(const int num_points, const float d2, const float r,
 	const int i = get_global_id(0);
 	const int i_idx = i * 3;
 
-	const int ipos_x = pos[i_idx+0];
-	const int ipos_y = pos[i_idx+1];
-	const int ipos_z = pos[i_idx+2];
+	const float ipos_x = pos[i_idx+0];
+	const float ipos_y = pos[i_idx+1];
+	const float ipos_z = pos[i_idx+2];
 
 	force[i_idx+0] = 0;
 	force[i_idx+1] = 0;

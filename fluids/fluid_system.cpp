@@ -570,6 +570,7 @@ void FluidSystem::ComputeForceSlow ()
 			dy = ( ipos->y - jpos.y);
 			dz = ( ipos->z - jpos.z);
 			dsq = d2*(dx*dx + dy*dy + dz*dz);
+
 			if ( dsq <= m_R2 ) 
 			{
 
@@ -2729,8 +2730,9 @@ void FluidSystem::ComputeForceOpenCL ()
 		const int j = i * 3;
 		mForce[i].x = forces[j+0];
 		mForce[i].y = forces[j+1];
-		mForce[i].z = forces[j+3];
+		mForce[i].z = forces[j+2];
 	}
+
 	delete[] forces;
 
 #if 0
@@ -2783,14 +2785,12 @@ void FluidSystem::RunSimulateOpenCL ()
 	mint::Time start;
 	start.SetSystemTime ( ACC_NSEC );
 	InsertParticles();//why?
-	record ( PTIME_INSERT, "Insert OpenCL", start );			
+	record ( PTIME_INSERT, "Insert OpenCL", start );
 	start.SetSystemTime ( ACC_NSEC );
 	ComputePressureOpenCL ();
-	//ComputePressureSlow ();
 	record ( PTIME_PRESS, "Press OpenCL", start );
 	start.SetSystemTime ( ACC_NSEC );
 	ComputeForceOpenCL ();
-	//ComputeForceSlow ();
 	record ( PTIME_FORCE, "Force OpenCL", start );
 	start.SetSystemTime ( ACC_NSEC );
 	Advance ();
