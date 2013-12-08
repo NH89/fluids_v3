@@ -203,6 +203,9 @@ void FluidSystem::Exit ()
 	cudaExit (0,0);
 #endif
 
+	delete m_program;
+	delete m_queue;
+	delete m_context;
 }
 
 
