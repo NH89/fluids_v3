@@ -2696,13 +2696,12 @@ void FluidSystem::ComputeForceOpenCL ()
 	cl::Buffer pressure_buf = cl::Buffer(*m_context, CL_MEM_READ_ONLY, num_points * sizeof(float));
 	cl::Buffer density_buf = cl::Buffer(*m_context, CL_MEM_READ_ONLY, num_points * sizeof(float));
 	cl::Buffer veleval_buf = cl::Buffer(*m_context, CL_MEM_READ_ONLY, num_points * 3 * sizeof(float));
-	cl::Buffer force_buf = cl::Buffer(*m_context, CL_MEM_READ_WRITE, num_points * 3 * sizeof(float));
+	cl::Buffer force_buf = cl::Buffer(*m_context, CL_MEM_READ_WRITE, num_points * sizeof(cl_float3));
 
 	m_queue->enqueueWriteBuffer(pos_buf, CL_TRUE, 0, num_points * 3 * sizeof(float), mPos);
 	m_queue->enqueueWriteBuffer(pressure_buf, CL_TRUE, 0, num_points * sizeof(float), mPressure);
 	m_queue->enqueueWriteBuffer(density_buf, CL_TRUE, 0, num_points * sizeof(float), mDensity);
 	m_queue->enqueueWriteBuffer(veleval_buf, CL_TRUE, 0, num_points * 3 * sizeof(float), mVelEval);
-	//m_queue->enqueueWriteBuffer(force_buf, CL_TRUE, 0, num_points * 3 * sizeof(float), forces);
 
 	//kernel's arguments
 	kernel.setArg( 0, num_points);
@@ -2723,14 +2722,13 @@ void FluidSystem::ComputeForceOpenCL ()
 	m_queue->enqueueNDRangeKernel(kernel, cl::NullRange, global, local, 0, &event);
 	event.wait();
 
-	float* forces = new float[num_points * 3];
-	m_queue->enqueueReadBuffer(force_buf, CL_TRUE, 0, num_points *  3 * sizeof(float), forces);
+	cl_float3* forces = new cl_float3[num_points];
+	m_queue->enqueueReadBuffer(force_buf, CL_TRUE, 0, num_points * sizeof(cl_float3), forces);
 
 	for (int i=0; i < num_points; ++i) {
-		const int j = i * 3;
-		mForce[i].x = forces[j+0];
-		mForce[i].y = forces[j+1];
-		mForce[i].z = forces[j+2];
+		mForce[i].x = forces[i].x;
+		mForce[i].y = forces[i].y;
+		mForce[i].z = forces[i].z;
 	}
 
 	delete[] forces;
