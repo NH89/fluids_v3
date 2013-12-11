@@ -2599,9 +2599,6 @@ void FluidSystem::ComputePressureOpenCL ()
 	const float d = m_Param[PSIMSCALE];
 	const float d2 = d*d;
 
-	int nbrcnt = 0;
-	int srch = 0;
-
 	const int num_points = NumPoints();
 
 	memset(mGridCell, 0, num_points * sizeof(uint));
@@ -2612,22 +2609,24 @@ void FluidSystem::ComputePressureOpenCL ()
 	cl::Buffer pos_buf = cl::Buffer(*m_context, CL_MEM_READ_ONLY, num_points * 3 * sizeof(float));
 	cl::Buffer pressure_buf = cl::Buffer(*m_context, CL_MEM_WRITE_ONLY, num_points * sizeof(float));
 	cl::Buffer density_buf = cl::Buffer(*m_context, CL_MEM_WRITE_ONLY, num_points * sizeof(float));
+	cl::Buffer nbr_buf = cl::Buffer(*m_context, CL_MEM_READ_WRITE, num_points * sizeof(cl_int));
 
 	m_queue->enqueueWriteBuffer(pos_buf, CL_TRUE, 0, num_points * 3 * sizeof(float), mPos);
 	m_queue->enqueueWriteBuffer(pressure_buf, CL_TRUE, 0, num_points * sizeof(float), mPressure);
 	m_queue->enqueueWriteBuffer(density_buf, CL_TRUE, 0, num_points * sizeof(float), mDensity);
 
 	//kernel's arguments
-	kernel.setArg(0, num_points);
-	kernel.setArg(1, d2);
-	kernel.setArg(2, static_cast<float>(m_R2));
-	kernel.setArg(3, static_cast<float>(m_Param[PMASS]));
-	kernel.setArg(4, static_cast<float>(m_Poly6Kern));
-	kernel.setArg(5, static_cast<float>(m_Param[PRESTDENSITY]));
-	kernel.setArg(6, static_cast<float>(m_Param[PINTSTIFF]));
-	kernel.setArg(7, pos_buf);
-	kernel.setArg(8, pressure_buf);
-	kernel.setArg(9, density_buf);
+	kernel.setArg( 0, num_points);
+	kernel.setArg( 1, d2);
+	kernel.setArg( 2, static_cast<float>(m_R2));
+	kernel.setArg( 3, static_cast<float>(m_Param[PMASS]));
+	kernel.setArg( 4, static_cast<float>(m_Poly6Kern));
+	kernel.setArg( 5, static_cast<float>(m_Param[PRESTDENSITY]));
+	kernel.setArg( 6, static_cast<float>(m_Param[PINTSTIFF]));
+	kernel.setArg( 7, pos_buf);
+	kernel.setArg( 8, pressure_buf);
+	kernel.setArg( 9, density_buf);
+	kernel.setArg(10, nbr_buf);
 
 	cl::NDRange global(num_points), local(1);
 	cl::Event event;
@@ -2637,7 +2636,15 @@ void FluidSystem::ComputePressureOpenCL ()
 	m_queue->enqueueReadBuffer(pressure_buf, CL_TRUE, 0, num_points * sizeof(float), mPressure);
 	m_queue->enqueueReadBuffer(density_buf, CL_TRUE, 0, num_points * sizeof(float), mDensity);
 
-	m_Param [ PSTAT_NBR ] = num_points * num_points; //FIXME not really...
+	int nbrcnt = 0;
+	cl_int* nbrs = new cl_int[num_points];
+	m_queue->enqueueReadBuffer(nbr_buf, CL_TRUE, 0, num_points * sizeof(cl_bool), nbrs);
+	for (int i=0; i < num_points; ++i) {
+		nbrcnt += nbrs[i];
+	}
+	delete[] nbrs;
+
+	m_Param [ PSTAT_NBR ] = nbrcnt;
 	m_Param [ PSTAT_SRCH ] = (num_points * num_points) - num_points;
 
 #if 0

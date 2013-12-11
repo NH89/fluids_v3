@@ -1,10 +1,11 @@
 
 __kernel void compute_pressure(const int num_points, const float d2, const float r2, const float mass, const float poly6kern, const float prest_densisty, const float pintstiff
-	,global float* pos, global float* pressure, global float* density) {
+	,global float* pos, global float* pressure, global float* density, global int* nbr) {
 
 	const int i = get_global_id(0);
 	const int i_idx = i * 3;
 
+	nbr[i] = 0;
 	const float3 ipos = (float3) (pos[i_idx+0], pos[i_idx+1], pos[i_idx+2]);
 
 	float sum = 0.0;
@@ -19,6 +20,7 @@ __kernel void compute_pressure(const int num_points, const float d2, const float
 		if (dsq <= r2) {
 			const float c =  r2 - dsq;
 			sum += c * c * c;
+			++nbr[i];
 		}
 
 		const float tmp_density = sum * mass * poly6kern;
