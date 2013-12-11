@@ -2647,41 +2647,6 @@ void FluidSystem::ComputePressureOpenCL ()
 	m_Param [ PSTAT_NBR ] = nbrcnt;
 	m_Param [ PSTAT_SRCH ] = (num_points * num_points) - num_points;
 
-#if 0
-	for ( i=0; i < NumPoints(); i++ )
-	{
-		mGridCell[i]=0;
-
-		sum = 0.0;
-
-		for ( j=0; j < NumPoints(); j++ )
-		{
-			if ( i==j )
-				continue;
-
-			dst = *(mPos + j);
-			dst -= *ipos;
-			dsq = d2*(dst.x*dst.x + dst.y*dst.y + dst.z*dst.z);
-			if ( dsq <= m_R2 ) {
-				c =  m_R2 - dsq;
-				sum += c * c * c;
-				nbrcnt++;
-			}
-			srch++;
-		}
-		*idensity = sum * m_Param[PMASS] * m_Poly6Kern ;
-		*ipress = ( *idensity - m_Param[PRESTDENSITY] ) * m_Param[PINTSTIFF];
-		*idensity = 1.0f / *idensity;
-
-		ipos++;
-		idensity++;
-		ipress++;
-	}
-	// Stats:
-	m_Param [ PSTAT_NBR ] = float(nbrcnt);
-	m_Param [ PSTAT_SRCH ] = float(srch);
-#endif
-
 	if ( m_Param[PSTAT_NBR] > m_Param [ PSTAT_NBRMAX ] ) m_Param [ PSTAT_NBRMAX ] = m_Param[PSTAT_NBR];
 	if ( m_Param[PSTAT_SRCH] > m_Param [ PSTAT_SRCHMAX ] ) m_Param [ PSTAT_SRCHMAX ] = m_Param[PSTAT_SRCH];
 }
@@ -2739,50 +2704,6 @@ void FluidSystem::ComputeForceOpenCL ()
 	}
 
 	delete[] forces;
-
-#if 0
-	for ( i=0; i < NumPoints(); i++ )
-	{
-		iforce->Set ( 0, 0, 0 );
-
-		for ( j=0; j < NumPoints(); j++ )
-		{
-
-			if ( i==j )
-				continue;
-
-			jpos = *(mPos + j);
-			dx = ( ipos->x - jpos.x);		// dist in cm
-			dy = ( ipos->y - jpos.y);
-			dz = ( ipos->z - jpos.z);
-			dsq = d2*(dx*dx + dy*dy + dz*dz);
-			if ( dsq <= m_R2 )
-			{
-
-				jdist = sqrt(dsq);
-
-				jpress = *(mPressure + j);
-				jdensity = *(mDensity + j);
-				jveleval = *(mVelEval + j);
-				dx = ( ipos->x - jpos.x);		// dist in cm
-				dy = ( ipos->y - jpos.y);
-				dz = ( ipos->z - jpos.z);
-				c = (mR-jdist);
-				pterm = d * -0.5f * c * m_SpikyKern * ( *ipress + jpress ) / jdist;
-				dterm = c * (*idensity) * jdensity;
-				vterm = m_LapKern * visc;
-				iforce->x += ( pterm * dx + vterm * ( jveleval.x - iveleval->x) ) * dterm;
-				iforce->y += ( pterm * dy + vterm * ( jveleval.y - iveleval->y) ) * dterm;
-				iforce->z += ( pterm * dz + vterm * ( jveleval.z - iveleval->z) ) * dterm;
-			}
-		}
-		ipos++;
-		iveleval++;
-		iforce++;
-		ipress++;
-		idensity++;
-	}
-#endif
 }
 
 void FluidSystem::RunSimulateOpenCL ()
