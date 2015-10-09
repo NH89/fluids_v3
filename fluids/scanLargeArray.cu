@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include <cutil_inline.h>
+//#include <cutil_inline.h>
 
 // includes, kernels
 #include <scan.cu>  // defines prescanArray()

@@ -27,7 +27,7 @@ void computeNumBlocks (int numPnts, int minThreads, int &numBlocks, int &numThre
 }
 
 
-void Grid_InsertParticlesCUDA ( uchar* data, uint stride, uint numPoints )
+void Grid_InsertParticlesCUDA ( char* data, uint stride, uint numPoints )
 {
     int numThreads, numBlocks;
     computeNumBlocks (numPoints, 256, numBlocks, numThreads);

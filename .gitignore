@@ -1,0 +1,9 @@
+CMakeFiles/*
+CMakeCache.txt
+fluids_v3
+cmake_install.cmake
+libfluid_system_host.a
+Makefile
+tags
+.ycm_extra_conf*
+.vimrc

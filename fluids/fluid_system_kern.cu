@@ -51,7 +51,7 @@ __global__ void insertParticles ( bufList buf, int pnum )
 	if ( gc.x >= 1 && gc.x <= gridScan.x && gc.y >= 1 && gc.y <= gridScan.y && gc.z >= 1 && gc.z <= gridScan.z ) {
 		buf.mgcell[i] = gs;											// Grid cell insert.
 		buf.mgndx[i] = atomicAdd ( &buf.mgridcnt[ gs ], 1 );		// Grid counts.
-		gcf = (-make_float3(poff,poff,poff) + buf.mpos[i] - gridMin) * gridDelta;
+		gcf = (buf.mpos[i] - gridMin - make_float3(poff,poff,poff)) * gridDelta;
 		gc = make_int3( int(gcf.x), int(gcf.y), int(gcf.z) );
 		gs = ( gc.y * gridRes.z + gc.z)*gridRes.x + gc.x;
 		//buf.mcluster[i] = gs;				-- make sure it is allocated!

@@ -21,7 +21,6 @@
 */
 
 
-#include <conio.h>
 #include "cutil.h"				// cutil32.lib
 #include "cutil_math.h"				// cutil32.lib
 #include <string.h>
@@ -35,7 +34,7 @@
 #include <cuda_gl_interop.h>
 #include <stdio.h>
 #include <math.h>
-		
+
 #include "fluid_system_host.cuh"		
 #include "fluid_system_kern.cuh"
 
@@ -122,7 +121,6 @@ void FluidClearCUDA ()
 	CUDA_SAFE_CALL ( cudaFree ( fbuf.mgridactive ) );
 }
 
-
 void FluidSetupCUDA ( int num, int gsrch, int3 res, float3 size, float3 delta, float3 gmin, float3 gmax, int total, int chk )
 {	
 	fcuda.pnum = num;	
@@ -167,7 +165,7 @@ void FluidSetupCUDA ( int num, int gsrch, int3 res, float3 size, float3 delta, f
 	CUDA_SAFE_CALL ( cudaMalloc ( (void**) &fbuf.mpress,	fcuda.szPnts*sizeof(float) ) );	
 	CUDA_SAFE_CALL ( cudaMalloc ( (void**) &fbuf.mdensity,	fcuda.szPnts*sizeof(float) ) );	
 	CUDA_SAFE_CALL ( cudaMalloc ( (void**) &fbuf.mgcell,	fcuda.szPnts*sizeof(uint) ) );	
-	CUDA_SAFE_CALL ( cudaMalloc ( (void**) &fbuf.mgndx,		fcuda.szPnts*sizeof(uint)) );	
+	CUDA_SAFE_CALL ( cudaMalloc ( (void**) &fbuf.mgndx,		fcuda.szPnts*sizeof(uint) ) );	
 	CUDA_SAFE_CALL ( cudaMalloc ( (void**) &fbuf.mclr,		fcuda.szPnts*sizeof(uint) ) );	
 	//CUDA_SAFE_CALL ( cudaMalloc ( (void**) &fbuf.mcluster,	fcuda.szPnts*sizeof(uint) ) );	
 
@@ -180,8 +178,8 @@ void FluidSetupCUDA ( int num, int gsrch, int3 res, float3 size, float3 delta, f
 	CUDA_SAFE_CALL ( cudaMalloc ( (void**) &fbuf.mgridcnt,	fcuda.szGrid*sizeof(int) ) );
 	CUDA_SAFE_CALL ( cudaMalloc ( (void**) &fbuf.mgridoff,	fcuda.szGrid*sizeof(int) ) );
 	CUDA_SAFE_CALL ( cudaMalloc ( (void**) &fbuf.mgridactive, fcuda.szGrid*sizeof(int) ) );
-		
-	CUDA_SAFE_CALL ( cudaMemcpyToSymbol ( "simData", &fcuda, sizeof(FluidParams) ) );
+	
+	CUDA_SAFE_CALL ( cudaMemcpyToSymbol ( simData, &fcuda, sizeof(FluidParams) ) );
 	cudaThreadSynchronize ();
 
 	// Prefix Sum - Preallocate Block sums for Sorting
@@ -221,7 +219,7 @@ void FluidParamCUDA ( float ss, float sr, float pr, float mass, float rest, floa
 	fcuda.spikykern = -45.0f / (3.141592 * pow( sr, 6.0f) );
 	fcuda.lapkern = 45.0f / (3.141592 * pow( sr, 6.0f) );	
 
-	CUDA_SAFE_CALL( cudaMemcpyToSymbol ( "simData", &fcuda, sizeof(FluidParams) ) );
+	CUDA_SAFE_CALL( cudaMemcpyToSymbol ( simData, &fcuda, sizeof(FluidParams) ) );
 	cudaThreadSynchronize ();
 }
 

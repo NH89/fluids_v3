@@ -19,7 +19,7 @@
 </Fluid>
 <Scene id="1">
 	<Name>		Small Wave Pool	</Name>
-	<Num>			1024			</Num>
+	<Num>			1			</Num>
 	<VolMin>		-100, 0, -10	</VolMin>
 	<VolMax> 		100, 30, 10	</VolMax>
 	<InitMin>		-70, 10, -10	</InitMin>

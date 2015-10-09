@@ -92,10 +92,9 @@
 	#define LOG_NUM_BANKS	 4
 
 	#ifndef CUDA_KERNEL
-		extern "C" {
-			FluidParams	simData;
-			uint		gridActive;
-		}		
+		extern __device__ FluidParams	simData;
+		extern __device__ uint		gridActive;
+
 		__global__ void insertParticles ( bufList buf, int pnum );
 		__global__ void countingSortIndex ( bufList buf, int pnum );		
 		__global__ void countingSortFull ( bufList buf, int pnum );		

@@ -12,6 +12,8 @@
 #ifndef _SCAN_BEST_KERNEL_CU_
 #define _SCAN_BEST_KERNEL_CU_
 
+#define LOG_NUM_BANKS 4
+
 // Define this to more rigorously avoid bank conflicts, 
 // even at the lower (root) levels of the tree
 // Note that due to the higher addressing overhead, performance 

@@ -23,6 +23,7 @@
 #include "gl_helper.h"
 #include <assert.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "camera3d.h"
 
@@ -137,11 +138,11 @@ void FluidSystem::Setup ( bool bStart )
 
 		FluidClearCUDA ();
 
-		Sleep ( 500 );
+		usleep ( 500000 );
 		
 		FluidSetupCUDA ( NumPoints(), m_GridSrch, *(int3*)& m_GridRes, *(float3*)& m_GridSize, *(float3*)& m_GridDelta, *(float3*)& m_GridMin, *(float3*)& m_GridMax, m_GridTotal, (int) m_Vec[PEMIT_RATE].x );
 
-		Sleep ( 500 );
+		usleep ( 500000 );
 
 		Vector3DF grav = m_Vec[PPLANE_GRAV_DIR];
 		FluidParamCUDA ( m_Param[PSIMSCALE], m_Param[PSMOOTHRADIUS], m_Param[PRADIUS], m_Param[PMASS], m_Param[PRESTDENSITY], *(float3*)& m_Vec[PBOUNDMIN], *(float3*)& m_Vec[PBOUNDMAX], m_Param[PEXTSTIFF], m_Param[PINTSTIFF], m_Param[PVISC], m_Param[PEXTDAMP], m_Param[PFORCE_MIN], m_Param[PFORCE_MAX], m_Param[PFORCE_FREQ], m_Param[PGROUND_SLOPE], grav.x, grav.y, grav.z, m_Param[PACCEL_LIMIT], m_Param[PVEL_LIMIT] );
@@ -301,7 +302,7 @@ void FluidSystem::AddEmit ( float spacing )
 	Vector3DF dir;
 	Vector3DF pos;
 	float ang_rand, tilt_rand;
-	float rnd = m_Vec[PEMIT_RATE].y * 0.15;	
+	float rnd = m_Vec[PEMIT_RATE].y * 0.15;
 	int x = (int) sqrt(m_Vec[PEMIT_RATE].y);
 
 	for ( int n = 0; n < m_Vec[PEMIT_RATE].y; n++ ) {
